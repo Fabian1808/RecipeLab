@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permite lectura pública de imágenes de recetas
+    match /recetas/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                      request.resource.size < 5 * 1024 * 1024 &&
+                      request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null &&
+                       resource.name.startsWith(request.auth.uid);
+    }
+
+    // Deniega acceso a todo lo demás
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

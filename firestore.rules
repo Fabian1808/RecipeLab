@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Función para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Función para verificar si el usuario es el dueño del documento
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Reglas para usuarios
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && validateUserData();
+      allow update: if isOwner(userId) && validateUserData();
+      allow delete: if isOwner(userId);
+
+      function validateUserData() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['uid', 'email']) &&
+               data.uid is string &&
+               data.email is string &&
+               data.email.size() > 0 &&
+               (!('puntos' in data) || data.puntos is number) &&
+               (!('insignia' in data) || data.insignia is string);
+      }
+    }
+
+    // Reglas para recetas
+    match /recipes/{recipeId} {
+      allow read: if isAuthenticated() && 
+                     (resource.data.isPublic == true || isOwner(resource.data.autorId));
+      allow create: if isAuthenticated() && validateRecipeData() && isOwner(request.resource.data.autorId);
+      allow update: if isAuthenticated() && isOwner(resource.data.autorId) && validateRecipeUpdate();
+      allow delete: if isAuthenticated() && isOwner(resource.data.autorId);
+
+      function validateRecipeData() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['titulo', 'categoria', 'descripcion', 'ingredientes', 'pasos', 'tiempoPreparacion', 'dificultad', 'autorId', 'autorNombre']) &&
+               data.titulo is string && data.titulo.size() > 0 &&
+               data.categoria is string && data.categoria.size() > 0 &&
+               data.descripcion is string && data.descripcion.size() > 0 &&
+               data.ingredientes is list && data.ingredientes.size() > 0 &&
+               data.pasos is list && data.pasos.size() > 0 &&
+               data.tiempoPreparacion is string &&
+               data.dificultad is string &&
+               data.autorId is string &&
+               data.autorNombre is string &&
+               data.titulo.size() <= 200 &&
+               data.descripcion.size() <= 1000;
+      }
+
+      function validateRecipeUpdate() {
+        let data = request.resource.data;
+        return (data.keys().hasAll(['titulo', 'categoria', 'descripcion', 'ingredientes', 'pasos']) &&
+                data.titulo is string && data.titulo.size() > 0 &&
+                data.categoria is string && data.categoria.size() > 0 &&
+                data.descripcion is string && data.descripcion.size() > 0 &&
+                data.ingredientes is list && data.ingredientes.size() > 0 &&
+                data.pasos is list && data.pasos.size() > 0) ||
+               (data.keys().hasOnly(['likes', 'favoritos']) &&
+                data.likes is list && data.favoritos is list);
+      }
+    }
+
+    // Reglas para comentarios
+    match /comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && validateCommentData() && isOwner(request.resource.data.usuarioId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.usuarioId);
+
+      function validateCommentData() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['recetaId', 'usuarioId', 'usuarioNombre', 'comentario']) &&
+               data.recetaId is string && data.recetaId.size() > 0 &&
+               data.usuarioId is string && data.usuarioId.size() > 0 &&
+               data.usuarioNombre is string && data.usuarioNombre.size() > 0 &&
+               data.comentario is string && data.comentario.size() > 0 &&
+               data.comentario.size() <= 500;
+      }
+    }
+
+    // Deniega acceso a todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
