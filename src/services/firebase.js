@@ -110,7 +110,7 @@ export async function obtenerRecetas() {
     const snap = await getDocs(
       query(collection(db, 'recipes'), orderBy('fechaCreacion', 'desc'))
     )
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs.map(d => ({ id: d.id, ...d.data(), imagen: d.data().imagen || d.data().imageUrl || '' }))
   } catch (error) {
     manejarError(error, `${CONTEXTO}/obtenerRecetas`)
     return []
@@ -126,7 +126,7 @@ export async function obtenerReceta(id) {
     if (!id) throw new Error('ID de receta inválido')
 
     const docSnap = await getDoc(doc(db, 'recipes', id))
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data(), imagen: docSnap.data().imagen || docSnap.data().imageUrl || '' } : null
   } catch (error) {
     manejarError(error, `${CONTEXTO}/obtenerReceta`)
     return null
