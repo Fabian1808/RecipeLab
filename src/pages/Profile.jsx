@@ -4,7 +4,7 @@ import { User, Medal, Award, BookOpen, Heart, Settings, LogOut } from 'lucide-re
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { obtenerUsuario, obtenerRecetas } from '../services/firebase'
+import { obtenerUsuario, obtenerRecetasUsuario } from '../services/firebaseService'
 import RecipeCard from '../components/RecipeCard'
 
 export default function Profile() {
@@ -17,14 +17,28 @@ export default function Profile() {
   const [tab, setTab] = useState('recetas')
 
   const load = async () => {
-    const data = await obtenerUsuario(user.uid)
-    setPerfil(data)
-    const todas = await obtenerRecetas()
-    setMisRecetas(todas.filter(r => r.autorId === user.uid))
-    setFavoritas(todas.filter(r => r.favoritos?.includes(user.uid)))
+    try {
+      const data = await obtenerUsuario(user.uid)
+      setPerfil(data || {
+        nombre: user.displayName || user.email?.split('@')[0],
+        puntos: 0,
+        insignia: 'Cocinero Novato'
+      })
+      
+      const todasMisRecetas = await obtenerRecetasUsuario(user.uid)
+      setMisRecetas(todasMisRecetas)
+      
+      // Favoritas del usuario
+      const todas = todasMisRecetas
+      setFavoritas(todas.filter(r => r.favoritos?.includes(user.uid)))
+    } catch (error) {
+      console.error('Error cargando perfil:', error)
+    }
   }
 
-  useEffect(() => { load() }, [user])
+  useEffect(() => { 
+    load() 
+  }, [user])
 
   const handleDelete = (id) => {
     setMisRecetas(prev => prev.filter(r => r.id !== id))
@@ -32,8 +46,12 @@ export default function Profile() {
   }
 
   const handleLogout = async () => {
-    await logout()
-    navigate('/login')
+    try {
+      await logout()
+      navigate('/login')
+    } catch (error) {
+      console.error('Error cerrando sesión:', error)
+    }
   }
 
   if (!perfil) return (
@@ -60,6 +78,11 @@ export default function Profile() {
               <div className="text-center md:text-left flex-1">
                 <h1 className={`text-xl md:text-2xl font-bold ${dark ? 'text-white' : 'text-slate-800'}`}>{perfil.nombre || user.email?.split('@')[0]}</h1>
                 <p className={`text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{user.email}</p>
+                {perfil.role === 'admin' && (
+                  <span className="inline-block mt-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-bold rounded-full">
+                    Administrador
+                  </span>
+                )}
               </div>
               <div className="flex gap-4 md:gap-6 text-center">
                 <div className="px-4 md:px-6 py-2 md:py-3 rounded-xl bg-orange-50 dark:bg-orange-900/20">
@@ -98,13 +121,16 @@ export default function Profile() {
             {(tab === 'recetas' ? misRecetas : favoritas).map((r, i) => (
               <RecipeCard key={r.id} receta={r} index={i} onDelete={handleDelete} />
             ))}
-            {(tab === 'recetas' ? misRecetas : favoritas).length === 0 && (
-              <div className={`col-span-full text-center py-12 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                <BookOpen size={40} className="mx-auto mb-3 opacity-50" />
-                <p className="text-sm">{tab === 'recetas' ? 'Aún no has creado recetas' : 'No tienes recetas favoritas'}</p>
-              </div>
-            )}
           </div>
+
+          {(tab === 'recetas' ? misRecetas : favoritas).length === 0 && (
+            <div className={`text-center py-12 rounded-2xl ${dark ? 'bg-slate-800' : 'bg-white'}`}>
+              <BookOpen size={48} className="mx-auto text-slate-400 mb-3" />
+              <p className={`text-base ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {tab === 'recetas' ? 'Aún no has creado recetas' : 'No tienes favoritos'}
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

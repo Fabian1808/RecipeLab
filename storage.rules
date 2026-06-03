@@ -1,17 +1,45 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permite lectura pública de imágenes de recetas
-    match /recetas/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null &&
-                      request.resource.size < 5 * 1024 * 1024 &&
-                      request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null &&
-                       resource.name.startsWith(request.auth.uid);
+    
+    // ==================== HELPERS ====================
+    
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Deniega acceso a todo lo demás
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    function isValidImageSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5 MB
+    }
+
+    function isImagePath() {
+      return resource.name.startsWith('recetas/');
+    }
+
+    // ==================== RECETAS (IMÁGENES) ====================
+    
+    match /recetas/{fileName} {
+      // Lectura pública de imágenes
+      allow read: if true;
+      
+      // Usuario autenticado puede subir imágenes
+      allow create: if isAuthenticated() 
+                    && isImage() 
+                    && isValidImageSize()
+                    && fileName.matches(request.auth.uid + '.*');
+      
+      // Usuario puede eliminar sus propias imágenes
+      allow delete: if isAuthenticated() 
+                    && fileName.matches(request.auth.uid + '.*');
+    }
+
+    // ==================== DEFAULT DENY ====================
+    
     match /{allPaths=**} {
       allow read, write: if false;
     }

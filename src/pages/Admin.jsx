@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Users, BookOpen, MessageCircle, Trash2, BarChart3, Search, UserPlus, Eye, EyeOff, Globe, Lock } from 'lucide-react'
+import { Users, BookOpen, MessageCircle, Trash2, BarChart3, Search, UserPlus, Globe, Lock } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
-import { obtenerEstadisticas, obtenerRecetas, eliminarReceta, obtenerTodosUsuarios } from '../services/firebase'
-import { getDemoPasswords, createDemoUserByAdmin } from '../services/demoService'
+import { obtenerEstadisticas, obtenerRecetas, eliminarReceta, obtenerTodosUsuarios } from '../services/firebaseService'
 
 export default function Admin() {
   const { dark } = useTheme()
-  const { demo } = useAuth()
+  const { isAdmin } = useAuth()
   const [stats, setStats] = useState(null)
   const [recetas, setRecetas] = useState([])
   const [usuarios, setUsuarios] = useState([])
-  const [passwords, setPasswords] = useState({})
+  const [newUser, setNewUser] = useState({ nombre: '', email: '', password: '' })
   const [tab, setTab] = useState('stats')
   const [busqueda, setBusqueda] = useState('')
-  const [showPw, setShowPw] = useState({})
-  const [newUser, setNewUser] = useState({ nombre: '', email: '', password: '' })
   const [creando, setCreando] = useState(false)
 
   const load = async () => {
@@ -26,9 +23,6 @@ export default function Admin() {
     setRecetas(r)
     const u = await obtenerTodosUsuarios()
     setUsuarios(u)
-    if (demo) {
-      setPasswords(getDemoPasswords())
-    }
   }
 
   useEffect(() => { load() }, [])
@@ -45,9 +39,6 @@ export default function Admin() {
     if (!newUser.nombre || !newUser.email || !newUser.password) return
     setCreando(true)
     try {
-      if (demo) {
-        createDemoUserByAdmin(newUser.nombre, newUser.email, newUser.password)
-      }
       setNewUser({ nombre: '', email: '', password: '' })
       load()
     } finally {
@@ -162,17 +153,7 @@ export default function Admin() {
                       <p className={`text-xs truncate ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{u.email}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {demo && passwords[u.uid] && (
-                        <div className="flex items-center gap-1">
-                          <span className={`text-xs font-mono ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {showPw[u.uid] ? passwords[u.uid] : '••••••'}
-                          </span>
-                          <button onClick={() => setShowPw(prev => ({ ...prev, [u.uid]: !prev[u.uid] }))}
-                            className="p-1 text-slate-400 hover:text-orange-500 transition-colors">
-                            {showPw[u.uid] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-                      )}
+
                       <div className="text-right">
                         <p className="font-bold text-orange-500 text-sm">{u.puntos || 0}</p>
                         <p className={`text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{u.insignia}</p>

@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app'
-import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
-import { getStorage, connectStorageEmulator } from 'firebase/storage'
+import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,8 +25,9 @@ if (hasConfig && getApps().length === 0) {
     auth = getAuth(app)
     db = getFirestore(app)
     storage = getStorage(app)
+    console.log('✓ Firebase inicializado correctamente')
   } catch (e) {
-    console.warn('Firebase initialization failed:', e)
+    console.error('✗ Error al inicializar Firebase:', e)
   }
 } else if (getApps().length > 0) {
   app = getApps()[0]
@@ -34,9 +35,7 @@ if (hasConfig && getApps().length === 0) {
   db = getFirestore(app)
   storage = getStorage(app)
 } else {
-  console.warn(
-    'Firebase no configurado. Crea un archivo .env con las variables de Firebase (ver .env.example)'
-  )
+  console.warn('⚠ Firebase no configurado. Verifica las variables de entorno.')
 }
 
 export { app, auth, db, storage }

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Search, ChefHat, TrendingUp, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
-import { obtenerRecetas } from '../services/firebase'
+import { obtenerRecetas } from '../services/firebaseService'
 import RecipeCard from '../components/RecipeCard'
 
 const CATEGORIAS = ['Postres', 'Bebidas', 'Comida rápida', 'Comida saludable', 'Cocina internacional']
@@ -19,9 +19,14 @@ export default function Home() {
 
   useEffect(() => {
     const load = async () => {
-      const data = await obtenerRecetas()
-      setRecetas(data)
-      setLoading(false)
+      try {
+        const data = await obtenerRecetas()
+        setRecetas(data)
+      } catch (error) {
+        console.error('Error cargando recetas:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])
@@ -29,7 +34,7 @@ export default function Home() {
   const filtradas = recetas.filter(r => {
     const matchBusqueda = !busqueda || r.titulo?.toLowerCase().includes(busqueda.toLowerCase()) || r.descripcion?.toLowerCase().includes(busqueda.toLowerCase())
     const matchCategoria = !categoria || r.categoria === categoria
-    const matchVisibilidad = r.isPublic !== false || (user && r.autorId === user.uid)
+    const matchVisibilidad = r.isPublic !== false || (user && r.createdBy === user.uid)
     return matchBusqueda && matchCategoria && matchVisibilidad
   })
 
@@ -37,6 +42,18 @@ export default function Home() {
     if (carruselRef.current) {
       carruselRef.current.scrollBy({ left: dir * 200, behavior: 'smooth' })
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+          className="w-10 h-10 border-2 border-orange-500 border-t-transparent rounded-full"
+        />
+      </div>
+    )
   }
 
   return (
@@ -78,7 +95,7 @@ export default function Home() {
               </div>
               {!user && (
                 <a href="/login" className="btn-primary text-center py-2.5 md:py-3 px-6 rounded-xl text-sm md:text-base">
-                  Comenzar ahora
+                  Comenzar
                 </a>
               )}
             </div>
@@ -86,69 +103,61 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={`py-4 md:py-6 ${dark ? 'bg-slate-800/50' : 'bg-white'}`}>
+      <section className={`py-8 md:py-12 ${dark ? 'bg-slate-900' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto px-4">
-          <div className="hidden md:flex flex-wrap gap-2 justify-center">
-            <button onClick={() => setCategoria('')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!categoria ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' : dark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-              Todas
-            </button>
-            {CATEGORIAS.map(cat => (
-              <button key={cat} onClick={() => setCategoria(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${categoria === cat ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' : dark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                {cat}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 mb-6">
+            <TrendingUp size={24} className="text-orange-500" />
+            <h2 className={`text-xl md:text-2xl font-bold ${dark ? 'text-white' : 'text-slate-800'}`}>Categorías</h2>
           </div>
 
-          <div className="md:hidden relative">
-            <button onClick={() => scrollCat(-1)} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/80 dark:bg-slate-800/80 shadow flex items-center justify-center backdrop-blur-sm">
-              <ChevronLeft size={16} />
+          <div className="relative">
+            <button onClick={() => scrollCat(-1)} className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full hover:bg-orange-500/20 hover:text-orange-500">
+              <ChevronLeft size={20} />
             </button>
-            <div ref={carruselRef} className="flex gap-2 overflow-x-auto snap-x py-2 px-6">
-              <button onClick={() => setCategoria('')}
-                className={`snap-start flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${!categoria ? 'bg-orange-500 text-white shadow-md' : dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                Todas
-              </button>
-              {CATEGORIAS.map(cat => (
-                <button key={cat} onClick={() => setCategoria(cat)}
-                  className={`snap-start flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${categoria === cat ? 'bg-orange-500 text-white shadow-md' : dark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                  {cat}
+
+            <div ref={carruselRef} className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+              {CATEGORIAS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCategoria(categoria === c ? '' : c)}
+                  className={`snap-start flex-shrink-0 px-5 py-2.5 rounded-full font-medium text-sm whitespace-nowrap transition-all ${
+                    categoria === c
+                      ? 'bg-orange-500 text-white shadow-md'
+                      : dark
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {c}
                 </button>
               ))}
             </div>
-            <button onClick={() => scrollCat(1)} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/80 dark:bg-slate-800/80 shadow flex items-center justify-center backdrop-blur-sm">
-              <ChevronRight size={16} />
+
+            <button onClick={() => scrollCat(1)} className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full hover:bg-orange-500/20 hover:text-orange-500">
+              <ChevronRight size={20} />
             </button>
           </div>
         </div>
       </section>
 
-      <section className={`py-6 md:py-12 ${dark ? 'bg-slate-900' : 'bg-gray-50'}`}>
+      <section className={`py-8 md:py-12 pb-20 md:pb-0 ${dark ? 'bg-slate-900' : 'bg-gray-50'}`}>
         <div className="max-w-7xl mx-auto px-4">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 md:gap-3 mb-4 md:mb-8">
-            <TrendingUp className="text-orange-500" size={20} />
-            <h2 className={`text-lg md:text-2xl font-bold ${dark ? 'text-white' : 'text-slate-800'}`}>
-              {busqueda || categoria ? 'Resultados' : 'Recetas Destacadas'}
+          <div className="flex items-center gap-3 mb-6">
+            <Sparkles size={24} className="text-orange-500" />
+            <h2 className={`text-xl md:text-2xl font-bold ${dark ? 'text-white' : 'text-slate-800'}`}>
+              {filtradas.length} Receta{filtradas.length !== 1 ? 's' : ''}
             </h2>
-            <Sparkles className="text-yellow-400" size={16} />
-          </motion.div>
+          </div>
 
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                className="w-10 h-10 md:w-12 md:h-12 border-2 border-orange-500 border-t-transparent rounded-full" />
+          {filtradas.length === 0 ? (
+            <div className={`text-center py-12 rounded-2xl ${dark ? 'bg-slate-800' : 'bg-white'}`}>
+              <ChefHat size={48} className="mx-auto text-slate-400 mb-3" />
+              <p className={`text-base ${dark ? 'text-slate-400' : 'text-slate-500'}`}>No se encontraron recetas</p>
             </div>
-          ) : filtradas.length === 0 ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`text-center py-12 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <ChefHat size={48} className="mx-auto mb-4 opacity-50" />
-              <p className="text-lg">No se encontraron recetas</p>
-              <p className="text-sm mt-2">¡Sé el primero en crear una!</p>
-            </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filtradas.map((r, i) => (
-                <RecipeCard key={r.id} receta={r} index={i} onDelete={(id) => setRecetas(prev => prev.filter(p => p.id !== id))} />
+                <RecipeCard key={r.id} receta={r} index={i} />
               ))}
             </div>
           )}
@@ -157,3 +166,4 @@ export default function Home() {
     </div>
   )
 }
+
