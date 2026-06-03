@@ -178,7 +178,7 @@ export async function obtenerReceta(id) {
   
   try {
     const docSnap = await getDoc(doc(db, 'recipes', id))
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data(), imagen: docSnap.data().imagen || docSnap.data().imageUrl || '' } : null
   } catch (error) {
     console.error('✗ Error obteniendo receta:', error)
     return null
@@ -195,7 +195,7 @@ export async function obtenerRecetas() {
     const snap = await getDocs(
       query(collection(db, 'recipes'), orderBy('createdAt', 'desc'))
     )
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs.map(d => ({ id: d.id, ...d.data(), imagen: d.data().imagen || d.data().imageUrl || '' }))
   } catch (error) {
     console.error('✗ Error obteniendo recetas:', error)
     return []
@@ -216,7 +216,7 @@ export async function obtenerRecetasUsuario(uid) {
         orderBy('createdAt', 'desc')
       )
     )
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs.map(d => ({ id: d.id, ...d.data(), imagen: d.data().imagen || d.data().imageUrl || '' }))
   } catch (error) {
     console.error('✗ Error obteniendo recetas del usuario:', error)
     return []
