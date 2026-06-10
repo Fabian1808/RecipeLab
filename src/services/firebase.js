@@ -108,7 +108,7 @@ export async function obtenerRecetas() {
   if (usarDemo()) return getDemoRecetas()
   try {
     const snap = await getDocs(
-      query(collection(db, 'recipes'), orderBy('fechaCreacion', 'desc'))
+      query(collection(db, 'recipes'), orderBy('createdAt', 'desc'))
     )
     return snap.docs.map(d => ({ id: d.id, ...d.data(), imagen: d.data().imagen || d.data().imageUrl || '' }))
   } catch (error) {

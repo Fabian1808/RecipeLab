@@ -4,7 +4,7 @@ import { User, Medal, Award, BookOpen, Heart, Settings, LogOut } from 'lucide-re
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { obtenerUsuario, obtenerRecetasUsuario } from '../services/firebaseService'
+import { obtenerUsuario, obtenerRecetasUsuario, obtenerRecetas } from '../services/firebaseService'
 import RecipeCard from '../components/RecipeCard'
 
 export default function Profile() {
@@ -27,10 +27,10 @@ export default function Profile() {
       
       const todasMisRecetas = await obtenerRecetasUsuario(user.uid)
       setMisRecetas(todasMisRecetas)
-      
-      // Favoritas del usuario
-      const todas = todasMisRecetas
-      setFavoritas(todas.filter(r => r.favoritos?.includes(user.uid)))
+
+      // Favoritas del usuario: buscar en TODAS las recetas, no solo las propias
+      const todasLasRecetas = await obtenerRecetas()
+      setFavoritas(todasLasRecetas.filter(r => r.favoritos?.includes(user.uid)))
     } catch (error) {
       console.error('Error cargando perfil:', error)
     }

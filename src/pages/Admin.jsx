@@ -185,7 +185,7 @@ export default function Admin() {
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>Contraseña</label>
-                  <input type="text" value={newUser.password} onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))} placeholder="Contraseña del usuario" required className={inputClass} />
+                  <input type="password" value={newUser.password} onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))} placeholder="Contraseña del usuario" required className={inputClass} />
                 </div>
                 <button type="submit" disabled={creando}
                   className="w-full btn-primary py-2.5 rounded-xl text-sm font-medium disabled:opacity-50">

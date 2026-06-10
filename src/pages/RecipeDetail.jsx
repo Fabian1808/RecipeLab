@@ -165,7 +165,7 @@ export default function RecipeDetail() {
                 <div>
                   <h2 className={`text-lg md:text-xl font-semibold mb-3 md:mb-4 ${dark ? 'text-white' : 'text-slate-800'}`}>Procedimiento</h2>
                   <ol className={`space-y-3 md:space-y-4 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {receta.pasos?.map((paso, i) => (
+                    {(receta.procedure || receta.pasos)?.map((paso, i) => (
                       <li key={i} className="flex gap-3 text-sm md:text-base">
                         <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs md:text-sm font-medium">{i + 1}</span>
                         <span className="pt-0.5 md:pt-1">{paso}</span>
